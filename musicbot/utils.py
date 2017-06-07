@@ -83,3 +83,10 @@ def md5sum(filename, limit=0):
         for chunk in iter(lambda: f.read(8192), b""):
             fhash.update(chunk)
     return fhash.hexdigest()[-limit:]
+
+def illegal_char(string, chars):
+    illegal = re.compile(chars)
+    if illegal.search(string):
+        return True
+    else:
+        return False
