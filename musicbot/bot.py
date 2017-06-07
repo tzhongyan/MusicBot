@@ -420,9 +420,11 @@ class MusicBot(discord.Client):
                 info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
 
                 if not info:
+                '''
                     self.autoplaylist.remove(song_url)
                     self.safe_print("[Info] Removing unplayable song from autoplaylist: %s" % song_url)
                     write_file(self.config.auto_playlist_file, self.autoplaylist)
+                '''
                     continue
 
                 if info.get('entries', None):  # or .get('_type', '') == 'playlist'
