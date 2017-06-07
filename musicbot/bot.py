@@ -757,7 +757,7 @@ class MusicBot(discord.Client):
 
             helpmsg += ", ".join(commands)
             helpmsg += "```"
-            helpmsg += "https://github.com/SexualRhinoceros/MusicBot/wiki/Commands-list \n"
+            helpmsg += "https://github.com/Just-Some-Bots/MusicBot/wiki/Commands \n"
             helpmsg += "But of course, with some of my (tzhongyan) own work as well =)"
 
             return Response(helpmsg, reply=True, delete_after=60)
