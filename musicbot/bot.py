@@ -38,7 +38,6 @@ from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
 
 load_opus_lib()
 
-
 class SkipState:
     def __init__(self):
         self.skippers = set()
@@ -66,12 +65,15 @@ class Response:
 
 
 class MusicBot(discord.Client):
+
+
     def __init__(self, config_file=ConfigDefaults.options_file, perms_file=PermissionsDefaults.perms_file):
         self.players = {}
         self.the_voice_clients = {}
         self.locks = defaultdict(asyncio.Lock)
         self.voice_client_connect_lock = asyncio.Lock()
         self.voice_client_move_lock = asyncio.Lock()
+        self.start_time = 0
 
         self.config = Config(config_file)
         self.permissions = Permissions(perms_file, grant_all=[self.config.owner_id])
@@ -595,6 +597,7 @@ class MusicBot(discord.Client):
 
     async def on_ready(self):
         print('\rConnected!  Musicbot v%s\n' % BOTVERSION)
+        self.start_time = time.time()
 
         if self.config.owner_id == self.user.id:
             raise exceptions.HelpfulError(
@@ -1292,6 +1295,19 @@ class MusicBot(discord.Client):
                 'There are no songs queued! Queue something with {}play.'.format(self.config.command_prefix),
                 delete_after=30
             )
+
+    async def cmd_uptime(self, channel):
+        """
+        Usage:
+
+        Showing uptime of the musicbot
+        """
+        nowtime = time.time()
+        uptime = nowtime - self.start_time
+        m,s = divmod(uptime, 60)
+        h,m = divmod(m,60)
+        d,h = divmod(h,24)
+        return Response("Current uptime: %ddays %dhrs %dmins %ds" % (d, h, m, s) , delete_after=30)
 
     async def cmd_pladd(self, player, song_url=None):
         """
