@@ -749,7 +749,7 @@ class MusicBot(discord.Client):
 
         else:
             helpmsg = "**Usage**\n```" 
-            helpmsg += "    {command_prefix}help [command]"
+            helpmsg += "    !help [command]"
             helpmsg += "```\n**Commands**\n```"
             commands = []
 
