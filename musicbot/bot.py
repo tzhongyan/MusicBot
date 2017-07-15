@@ -1135,6 +1135,7 @@ class MusicBot(discord.Client):
         return Response("Enqueued {} songs to be played in {} seconds".format(
             songs_added, self._fixg(ttime, 1)), delete_after=30)
 
+
     async def cmd_search(self, player, channel, author, permissions, leftover_args):
         """
         Usage:
@@ -1308,6 +1309,16 @@ class MusicBot(discord.Client):
         h,m = divmod(m,60)
         d,h = divmod(h,24)
         return Response("Current uptime: %ddays %dhrs %dmins %ds" % (d, h, m, s) , delete_after=30)
+
+    async def cmd_play_initiald(self, player, channel, author, permissions):
+        """
+        Usage:
+            !play_initald
+
+        Adds the Initial D playlist into the playlist.  
+        """
+        #return self.cmd_play(player, channel, author, permissions, '', 'https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq')
+        return Response("!play https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
 
     async def cmd_pladd(self, player, song_url=None):
         """
@@ -1918,9 +1929,12 @@ class MusicBot(discord.Client):
         if not message_content.startswith(self.config.command_prefix):
             return
 
+        # for play_initiald to work :3
+        """
         if message.author == self.user:
             self.safe_print("Ignoring command from myself (%s)" % message.content)
             return
+        """
 
         if self.config.bound_channels and message.channel.id not in self.config.bound_channels and not message.channel.is_private:
             return  # if I want to log this I just move it under the prefix check
