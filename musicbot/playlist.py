@@ -227,6 +227,10 @@ class Playlist(EventEmitter):
 
     def remove_entry(self, index):
         del self.entries[index]
+    
+    def push_entry(self, index):
+        self.entries.appendleft(self.entries[index])
+        del self.entries[index+1]
 
     async def get_next_entry(self, predownload_next=True):
         """
@@ -268,5 +272,4 @@ class Playlist(EventEmitter):
 
     def count_for_user(self, user):
         return sum(1 for e in self.entries if e.meta.get('author', None) == user)
-
 

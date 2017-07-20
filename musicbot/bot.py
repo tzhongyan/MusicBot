@@ -1304,7 +1304,7 @@ class MusicBot(discord.Client):
     async def cmd_remove(self, message, player, index):
         """
         Usage:
-            !command_prefix}remove [number]
+            !remove [number]
         
         Removes a song from the queue at the given position, where the position is a number from {command_prefix}queue.
         """
@@ -1329,6 +1329,33 @@ class MusicBot(discord.Client):
         else:
             raise exceptions.CommandError("You can't remove the current song (skip it instead), or a song in a position that doesn't exist.", expire_in=20)
 
+    async def cmd_prioritise(self, message, player, index):
+        """
+        Usage:
+            !prioritise [number]
+        
+        Push a song from the queue at the given position to the top of queue.
+        """
+
+        if not player.playlist.entries:
+            raise exceptions.CommandError("There are no songs queued.", expire_in=20)
+
+        try:
+            index = int(index)
+        except ValueError:
+            raise exceptions.CommandError('{} is not a valid number.'.format(index), expire_in=20)
+
+        if 0 < index <= len(player.playlist.entries):
+            try:
+                song_title = player.playlist.entries[index-1].title
+                player.playlist.push_entry((index)-1)
+            except IndexError:
+                raise exceptions.CommandError("Something went wrong while the song was being prioritise. Try again with a new position from `" + self.config.command_prefix + "queue`", expire_in=20)
+
+            return Response("\N{CHECK MARK} will be played next. **" + song_title + "**", delete_after=20)
+
+        else:
+            raise exceptions.CommandError("You can't remove the current song (skip it instead), or a song in a position that doesn't exist.", expire_in=20)
 
     async def cmd_uptime(self, channel):
         """
