@@ -731,7 +731,7 @@ class MusicBot(discord.Client):
     async def cmd_help(self, command=None):
         """
         Usage:
-            {command_prefix}help [command]
+            !help [command]
 
         Prints a help message.
         If a command is specified, it prints a help message for that command.
@@ -772,7 +772,7 @@ class MusicBot(discord.Client):
     async def cmd_blacklist(self, message, user_mentions, option, something):
         """
         Usage:
-            {command_prefix}blacklist [ + | - | add | remove ] @UserName [@UserName2 ...]
+            !blacklist [ + | - | add | remove ] @UserName [@UserName2 ...]
 
         Add or remove users to the blacklist.
         Blacklisted users are forbidden from using bot commands.
@@ -819,7 +819,7 @@ class MusicBot(discord.Client):
     async def cmd_id(self, author, user_mentions):
         """
         Usage:
-            {command_prefix}id [@user]
+            !id [@user]
 
         Tells the user their id or the id of another user.
         """
@@ -833,7 +833,7 @@ class MusicBot(discord.Client):
     async def cmd_joinserver(self, message, server_link=None):
         """
         Usage:
-            {command_prefix}joinserver invite_link
+            !joinserver invite_link
 
         Asks the bot to join a server.  Note: Bot accounts cannot use invite links.
         """
@@ -856,8 +856,8 @@ class MusicBot(discord.Client):
     async def cmd_play(self, player, channel, author, permissions, leftover_args, song_url):
         """
         Usage:
-            {command_prefix}play song_link
-            {command_prefix}play text to search for
+            !play song_link
+            !play text to search for
 
         Adds the song to the playlist.  If a link is not provided, the first
         result from a youtube search is added to the queue.
@@ -1143,7 +1143,7 @@ class MusicBot(discord.Client):
     async def cmd_search(self, player, channel, author, permissions, leftover_args):
         """
         Usage:
-            {command_prefix}search [service] [number] query
+            !search [service] [number] query
 
         Searches a service for a video and adds it to the queue.
         - service: any one of the following services:
@@ -1154,7 +1154,7 @@ class MusicBot(discord.Client):
           - defaults to 1 if unspecified
           - note: If your search query starts with a number,
                   you must put your query in quotes
-            - ex: {command_prefix}search 2 "I ran seagulls"
+            - ex: !search 2 "I ran seagulls"
         """
 
         if permissions.max_songs and player.playlist.count_for_user(author) > permissions.max_songs:
@@ -1273,7 +1273,7 @@ class MusicBot(discord.Client):
     async def cmd_np(self, player, channel, server, message):
         """
         Usage:
-            {command_prefix}np
+            !np
 
         Displays the current song in chat.
         """
@@ -1327,8 +1327,8 @@ class MusicBot(discord.Client):
     async def cmd_pladd(self, player, song_url=None):
         """
         Usage:
-            {command_prefix}pladd - adding current song
-            {command_prefix}pladd song_url - adding url into playlist
+            !pladd - adding current song
+            !pladd song_url - adding url into playlist
 
         Adds a song to the autoplaylist.
         """
@@ -1365,8 +1365,8 @@ class MusicBot(discord.Client):
     async def cmd_plremove(self, player, song_url=None):
         """
         Usage:
-            {command_prefix}plremove current song
-            {command_prefix}plremove song_url
+            !plremove current song
+            !plremove song_url
 
         Remove a song from the autoplaylist.
         """
@@ -1406,7 +1406,7 @@ class MusicBot(discord.Client):
     async def cmd_summon(self, channel, author, voice_channel):
         """
         Usage:
-            {command_prefix}summon
+            !summon
 
         Call the bot to the summoner's voice channel.
         """
@@ -1447,7 +1447,7 @@ class MusicBot(discord.Client):
     async def cmd_pause(self, player):
         """
         Usage:
-            {command_prefix}pause
+            !pause
 
         Pauses playback of the current song.
         """
@@ -1461,7 +1461,7 @@ class MusicBot(discord.Client):
     async def cmd_resume(self, player):
         """
         Usage:
-            {command_prefix}resume
+            !resume
 
         Resumes playback of a paused song.
         """
@@ -1475,7 +1475,7 @@ class MusicBot(discord.Client):
     async def cmd_shuffle(self, channel, player):
         """
         Usage:
-            {command_prefix}shuffle
+            !shuffle
 
         Shuffles the playlist.
         """
@@ -1497,7 +1497,7 @@ class MusicBot(discord.Client):
     async def cmd_clear(self, player, author):
         """
         Usage:
-            {command_prefix}clear
+            !clear
 
         Clears the playlist.
         """
@@ -1508,7 +1508,7 @@ class MusicBot(discord.Client):
     async def cmd_skip(self, player, channel, author, message, permissions, voice_channel):
         """
         Usage:
-            {command_prefix}skip
+            !skip
 
         Skips the current song when enough votes are cast, or by the bot owner.
         """
@@ -1578,7 +1578,7 @@ class MusicBot(discord.Client):
     async def cmd_volume(self, message, player, new_volume=None):
         """
         Usage:
-            {command_prefix}volume (+/-)[volume]
+            !volume (+/-)[volume]
 
         Sets the playback volume. Accepted values are from 1 to 100.
         Putting + or - before the volume will make the volume change relative to the current volume.
@@ -1620,7 +1620,7 @@ class MusicBot(discord.Client):
     async def cmd_queue(self, channel, player):
         """
         Usage:
-            {command_prefix}queue
+            !queue
 
         Prints the current song queue.
         """
@@ -1668,7 +1668,7 @@ class MusicBot(discord.Client):
     async def cmd_clean(self, message, channel, server, author, search_range=50):
         """
         Usage:
-            {command_prefix}clean [range]
+            !clean [range]
 
         Removes up to [range] messages the bot has posted in chat. Default: 50, Max: 1000
         """
@@ -1735,8 +1735,8 @@ class MusicBot(discord.Client):
     async def cmd_lyrics(self, channel, player, song_url=None):
         """
         Usage:
-            {command_prefix}lyrics 
-            {command_prefix}lyrics song_url
+            !lyrics 
+            !lyrics song_url
         Displays the lyrics of the current song, otherwise you have to specify an URL
         """ 
             
@@ -1802,7 +1802,7 @@ class MusicBot(discord.Client):
     async def cmd_pldump(self, channel, song_url):
         """
         Usage:
-            {command_prefix}pldump url
+            !pldump url
 
         Dumps the individual urls of a playlist
         """
@@ -1847,7 +1847,7 @@ class MusicBot(discord.Client):
     async def cmd_listids(self, server, author, leftover_args, cat='all'):
         """
         Usage:
-            {command_prefix}listids [categories]
+            !listids [categories]
 
         Lists the ids for various things.  Categories are:
            all, users, roles, channels
@@ -1905,7 +1905,7 @@ class MusicBot(discord.Client):
     async def cmd_perms(self, author, channel, server, permissions):
         """
         Usage:
-            {command_prefix}perms
+            !perms
 
         Sends the user a list of their permissions.
         """
@@ -1926,7 +1926,7 @@ class MusicBot(discord.Client):
     async def cmd_setname(self, leftover_args, name):
         """
         Usage:
-            {command_prefix}setname name
+            !setname name
 
         Changes the bot's username.
         Note: This operation is limited by discord to twice per hour.
@@ -1945,7 +1945,7 @@ class MusicBot(discord.Client):
     async def cmd_setnick(self, server, channel, leftover_args, nick):
         """
         Usage:
-            {command_prefix}setnick nick
+            !setnick nick
 
         Changes the bot's nickname.
         """
@@ -1966,7 +1966,7 @@ class MusicBot(discord.Client):
     async def cmd_setavatar(self, message, url=None):
         """
         Usage:
-            {command_prefix}setavatar [url]
+            !setavatar [url]
 
         Changes the bot's avatar.
         Attaching a file and leaving the url parameter blank also works.
