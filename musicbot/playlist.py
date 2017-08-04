@@ -232,6 +232,14 @@ class Playlist(EventEmitter):
         self.entries.appendleft(self.entries[index])
         del self.entries[index+1]
 
+    def promoteLast(self):
+        entry = self.entries.pop()
+        self.entries.appendleft(entry)
+        self.emit('entry-added', playlist=self, entry=entry)
+        entry.get_ready_future()
+
+        return entry
+
     async def get_next_entry(self, predownload_next=True):
         """
             A coroutine which will return the next song or None if no songs left to play.

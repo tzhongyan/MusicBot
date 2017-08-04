@@ -86,6 +86,14 @@ class MusicPlayerState(Enum):
         return self.name
 
 
+class MusicPlayerRepeatState(Enum):
+    NONE = 0 # Not repeating
+    YES = 1 # Is repeating
+
+    def __str__(self):
+        return self.name
+
+
 class MusicPlayer(EventEmitter):
     def __init__(self, bot, voice_client, playlist):
         super().__init__()
@@ -95,6 +103,8 @@ class MusicPlayer(EventEmitter):
         self.playlist = playlist
         self.playlist.on('entry-added', self.on_entry_added)
         self._volume = bot.config.default_volume
+
+        self.repeatState = MusicPlayerRepeatState.NONE
 
         self._play_lock = asyncio.Lock()
         self._current_player = None
@@ -118,7 +128,23 @@ class MusicPlayer(EventEmitter):
             self.loop.call_later(2, self.play)
 
     def skip(self):
+        if self.repeatState == MusicPlayerRepeatState.YES:
+            self.repeatState = MusicPlayerRepeatState.NONE
         self._kill_current_player()
+
+    def repeat(self):
+        if self.repeatState == MusicPlayerRepeatState.NONE:
+            self.repeatState = MusicPlayerRepeatState.YES
+        else:
+            self.repeatState = MusicPlayerRepeatState.NONE
+
+    def repeat_status(self):
+        if self.repeatState == MusicPlayerRepeatState.NONE:
+            return 0
+        elif self.repeatState == MusicPlayerRepeatState.YES: 
+            return 1
+        else:
+            return 2 # error
 
     def stop(self):
         self.state = MusicPlayerState.STOPPED
@@ -163,6 +189,10 @@ class MusicPlayer(EventEmitter):
 
     def _playback_finished(self):
         entry = self._current_entry
+
+        if self.repeatState == MusicPlayerRepeatState.YES:
+            self.playlist._add_entry(entry)
+            self.playlist.promoteLast()
 
         if self._current_player:
             self._current_player.after = None

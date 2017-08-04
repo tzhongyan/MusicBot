@@ -1357,6 +1357,42 @@ class MusicBot(discord.Client):
         else:
             raise exceptions.CommandError("You can't remove the current song (skip it instead), or a song in a position that doesn't exist.", expire_in=20)
 
+
+    async def cmd_repeat(self, player):
+        """
+            Usage:
+                !repeat
+            Toggle repeat on current song on/off.
+        """
+        if player.is_stopped:
+            raise exceptions.CommandError("Can't change repeat mode! The player is not playing!", expire_in=20)
+        player.repeat() 
+        state = player.repeat_status()
+
+        if state == 1:
+            return Response("[Toggle] Repeat mode: on", delete_after=15)
+        elif state == 0:
+            return Response("[Toggle] Repeat mode: off", delete_after=15)
+        else:
+            raise exceptions.CommandError("Something is wrong but we are not sure why.", expire_in=20)
+
+    
+    async def cmd_repeat_state(self, player):
+        """
+            Usage: 
+                !repeatState
+            Check repeat song state
+        """
+        state = player.repeat_status()
+        if state == 1:
+            return Reponse("Repeat mode: on", delete_after=15)
+        elif state == 0:
+            return Response("Repeat mode: off", delete_after=15)
+        else:
+            raise exceptions.CommandError("Something is wrong but we are not sure why.", expire_in=20)
+    
+
+
     async def cmd_uptime(self, channel):
         """
         Usage:
