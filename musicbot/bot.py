@@ -1385,7 +1385,7 @@ class MusicBot(discord.Client):
         """
         state = player.repeat_status()
         if state == 1:
-            return Reponse("Repeat mode: on", delete_after=15)
+            return Response("Repeat mode: on", delete_after=15)
         elif state == 0:
             return Response("Repeat mode: off", delete_after=15)
         else:
