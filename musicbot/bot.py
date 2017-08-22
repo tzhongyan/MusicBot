@@ -1413,8 +1413,16 @@ class MusicBot(discord.Client):
 
         Adds the Initial D playlist into the playlist.  
         """
-        #return self.cmd_play(player, channel, author, permissions, '', 'https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq')
         return Response("!play https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
+
+    async def cmd_aesthetic(self, player, channel, author, permissions):
+        """
+        Usage:
+            !aesthetic
+
+        Adds a vaporwave playlist into the playlist.  
+        """
+        return Response("!play https://www.youtube.com/playlist?list=PLK_A0_qspnj20ZweIadBrk1KihKW_ZmNE")
 
     async def cmd_pladd(self, player, song_url=None):
         """
