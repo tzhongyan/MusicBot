@@ -354,7 +354,6 @@ class Playlist(EventEmitter, Serializable):
     def count_for_user(self, user):
         return sum(1 for e in self.entries if e.meta.get('author', None) == user)
 
-<<<<<<< HEAD
 
     def __json__(self):
         return self._enclose_json({
@@ -373,5 +372,3 @@ class Playlist(EventEmitter, Serializable):
         # TODO: create a function to init downloading (since we don't do it here)?
         return pl
 
-=======
->>>>>>> master
