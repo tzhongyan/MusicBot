@@ -9,10 +9,19 @@ import logging
 import asyncio
 import pathlib
 import traceback
+import urllib.parse
+import lyricwikia
+import requests
 
 import aiohttp
 import discord
 import colorlog
+from discord import utils
+from discord.object import Object
+from discord.enums import ChannelType
+from discord.voice_client import VoiceClient
+from discord.ext.commands.bot import _get_variable
+from lxml import html
 
 from io import BytesIO, StringIO
 from functools import wraps
@@ -23,6 +32,12 @@ from collections import defaultdict
 from discord.enums import ChannelType
 from discord.ext.commands.bot import _get_variable
 from discord.http import _func_
+from musicbot.playlist import Playlist
+from musicbot.player import MusicPlayer
+from musicbot.config import Config, ConfigDefaults
+from musicbot.permissions import Permissions, PermissionsDefaults
+from musicbot.utils import load_file, write_file, sane_round_int, illegal_char
+
 
 from . import exceptions
 from . import downloader
@@ -42,22 +57,46 @@ from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
 
 load_opus_lib()
 
-log = logging.getLogger(__name__)
+class SkipState:
+    def __init__(self):
+        self.skippers = set()
+        self.skip_msgs = set()
+
+    @property
+    def skip_count(self):
+        return len(self.skippers)
+
+    def reset(self):
+        self.skippers.clear()
+        self.skip_msgs.clear()
+
+    def add_skipper(self, skipper, msg):
+        self.skippers.add(skipper)
+        self.skip_msgs.add(msg)
+        return self.skip_count
+
+
+class Response:
+    def __init__(self, content, reply=False, delete_after=0):
+        self.content = content
+        self.reply = reply
+        self.delete_after = delete_after
 
 
 class MusicBot(discord.Client):
-    def __init__(self, config_file=None, perms_file=None):
-        if config_file is None:
-            config_file = ConfigDefaults.options_file
 
-        if perms_file is None:
-            perms_file = PermissionsDefaults.perms_file
 
+    def __init__(self, config_file=ConfigDefaults.options_file, perms_file=PermissionsDefaults.perms_file):
         self.players = {}
         self.exit_signal = None
         self.init_ok = False
         self.cached_app_info = None
         self.last_status = None
+        self.the_voice_clients = {}
+        self.locks = defaultdict(asyncio.Lock)
+        self.voice_client_connect_lock = asyncio.Lock()
+        self.voice_client_move_lock = asyncio.Lock()
+        self.start_time = 0
 
         self.config = Config(config_file)
         self.permissions = Permissions(perms_file, grant_all=[self.config.owner_id])
@@ -69,6 +108,9 @@ class MusicBot(discord.Client):
         self.downloader = downloader.Downloader(download_folder='audio_cache')
 
         self._setup_logging()
+        self.exit_signal = None
+        self.init_ok = False
+        self.cached_client_id = None
 
         if not self.autoplaylist:
             log.warning("Autoplaylist is empty, disabling.")
@@ -98,6 +140,10 @@ class MusicBot(discord.Client):
 
         try:    self.aiosession.close()
         except: pass
+
+        super().__init__()
+        self.aiosession = aiohttp.ClientSession(loop=self.loop)
+        self.http.user_agent += ' MusicBot/%s' % BOTVERSION
 
     # TODO: Add some sort of `denied` argument for a message to send when someone else tries to use it
     def owner_only(func):
@@ -694,7 +740,7 @@ class MusicBot(discord.Client):
         if self.user.bot:
             activeplayers = sum(1 for p in self.players.values() if p.is_playing)
             if activeplayers > 1:
-                game = discord.Game(name="music on %s servers" % activeplayers)
+                game = discord.Game(type=0, name="music on %s servers" % activeplayers)
                 entry = None
 
             elif activeplayers == 1:
@@ -705,7 +751,7 @@ class MusicBot(discord.Client):
             prefix = u'\u275A\u275A ' if is_paused else ''
 
             name = u'{}{}'.format(prefix, entry.title)[:128]
-            game = discord.Game(name=name)
+            game = discord.Game(type=0, name=name)
 
         async with self.aiolocks[_func_()]:
             if game != self.last_status:
@@ -986,9 +1032,8 @@ class MusicBot(discord.Client):
             if getattr(h, 'terminator', None) == '':
                 dlogger.removeHandler(h)
                 print()
-
+        self.start_time = time.time()
         log.debug("Connection established, ready to go.")
-
         self.ws._keep_alive.name = 'Gateway Keepalive'
 
         if self.init_ok:
@@ -1121,7 +1166,7 @@ class MusicBot(discord.Client):
     async def cmd_help(self, command=None):
         """
         Usage:
-            {command_prefix}help [command]
+            !help [command]
 
         Prints a help message.
         If a command is specified, it prints a help message for that command.
@@ -1141,7 +1186,9 @@ class MusicBot(discord.Client):
                 return Response("No such command", delete_after=10)
 
         else:
-            helpmsg = "**Available commands**\n```"
+            helpmsg = "**Usage**\n```" 
+            helpmsg += "    !help [command]"
+            helpmsg += "```\n**Commands**\n```"
             commands = []
 
             for att in dir(self):
@@ -1150,15 +1197,16 @@ class MusicBot(discord.Client):
                     commands.append("{}{}".format(self.config.command_prefix, command_name))
 
             helpmsg += ", ".join(commands)
-            helpmsg += "```\n<https://github.com/SexualRhinoceros/MusicBot/wiki/Commands-list>"
-            helpmsg += "You can also use `{}help x` for more info about each command.".format(self.config.command_prefix)
+            helpmsg += "```"
+            helpmsg += "https://github.com/Just-Some-Bots/MusicBot/wiki/Commands \n"
+            helpmsg += "But of course, with some of my (tzhongyan) own work as well =)"
 
             return Response(helpmsg, reply=True, delete_after=60)
 
     async def cmd_blacklist(self, message, user_mentions, option, something):
         """
         Usage:
-            {command_prefix}blacklist [ + | - | add | remove ] @UserName [@UserName2 ...]
+            !blacklist [ + | - | add | remove ] @UserName [@UserName2 ...]
 
         Add or remove users to the blacklist.
         Blacklisted users are forbidden from using bot commands.
@@ -1205,7 +1253,7 @@ class MusicBot(discord.Client):
     async def cmd_id(self, author, user_mentions):
         """
         Usage:
-            {command_prefix}id [@user]
+            !id [@user]
 
         Tells the user their id or the id of another user.
         """
@@ -1219,7 +1267,7 @@ class MusicBot(discord.Client):
     async def cmd_joinserver(self, message, server_link=None):
         """
         Usage:
-            {command_prefix}joinserver invite_link
+            !joinserver invite_link
 
         Asks the bot to join a server.  Note: Bot accounts cannot use invite links.
         """
@@ -1242,8 +1290,8 @@ class MusicBot(discord.Client):
     async def cmd_play(self, player, channel, author, permissions, leftover_args, song_url):
         """
         Usage:
-            {command_prefix}play song_link
-            {command_prefix}play text to search for
+            !play song_link
+            !play text to search for
 
         Adds the song to the playlist.  If a link is not provided, the first
         result from a youtube search is added to the queue.
@@ -1552,10 +1600,11 @@ class MusicBot(discord.Client):
 
         return Response(":+1:", delete_after=6)
 
+
     async def cmd_search(self, player, channel, author, permissions, leftover_args):
         """
         Usage:
-            {command_prefix}search [service] [number] query
+            !search [service] [number] query
 
         Searches a service for a video and adds it to the queue.
         - service: any one of the following services:
@@ -1566,7 +1615,7 @@ class MusicBot(discord.Client):
           - defaults to 1 if unspecified
           - note: If your search query starts with a number,
                   you must put your query in quotes
-            - ex: {command_prefix}search 2 "I ran seagulls"
+            - ex: !search 2 "I ran seagulls"
         """
 
         if permissions.max_songs and player.playlist.count_for_user(author) > permissions.max_songs:
@@ -1686,7 +1735,7 @@ class MusicBot(discord.Client):
     async def cmd_np(self, player, channel, server, message):
         """
         Usage:
-            {command_prefix}np
+            !np
 
         Displays the current song in chat.
         """
@@ -1730,10 +1779,214 @@ class MusicBot(discord.Client):
                 delete_after=30
             )
 
-    async def cmd_summon(self, channel, server, author, voice_channel):
+    async def cmd_remove(self, message, player, index):
         """
         Usage:
-            {command_prefix}summon
+            !remove [number]
+        
+        Removes a song from the queue at the given position, where the position is a number from {command_prefix}queue.
+        """
+
+        if not player.playlist.entries:
+            raise exceptions.CommandError("There are no songs queued.", expire_in=20)
+
+        try:
+            index = int(index)
+        except ValueError:
+            raise exceptions.CommandError('{} is not a valid number.'.format(index), expire_in=20)
+
+        if 0 < index <= len(player.playlist.entries):
+            try:
+                song_title = player.playlist.entries[index-1].title
+                player.playlist.remove_entry((index)-1)
+            except IndexError:
+                raise exceptions.CommandError("Something went wrong while the song was being removed. Try again with a new position from `" + self.config.command_prefix + "queue`", expire_in=20)
+
+            return Response("\N{CHECK MARK} removed **" + song_title + "**", delete_after=20)
+
+        else:
+            raise exceptions.CommandError("You can't remove the current song (skip it instead), or a song in a position that doesn't exist.", expire_in=20)
+
+    async def cmd_prioritise(self, message, player, index):
+        """
+        Usage:
+            !prioritise [number]
+        
+        Push a song from the queue at the given position to the top of queue.
+        """
+
+        if not player.playlist.entries:
+            raise exceptions.CommandError("There are no songs queued.", expire_in=20)
+
+        try:
+            index = int(index)
+        except ValueError:
+            raise exceptions.CommandError('{} is not a valid number.'.format(index), expire_in=20)
+
+        if 0 < index <= len(player.playlist.entries):
+            try:
+                song_title = player.playlist.entries[index-1].title
+                player.playlist.push_entry((index)-1)
+            except IndexError:
+                raise exceptions.CommandError("Something went wrong while the song was being prioritise. Try again with a new position from `" + self.config.command_prefix + "queue`", expire_in=20)
+
+            return Response("\N{CHECK MARK} will be played next. **" + song_title + "**", delete_after=20)
+
+        else:
+            raise exceptions.CommandError("You can't remove the current song (skip it instead), or a song in a position that doesn't exist.", expire_in=20)
+
+
+    async def cmd_repeat(self, player):
+        """
+            Usage:
+                !repeat
+            Toggle repeat on current song on/off.
+        """
+        if player.is_stopped:
+            raise exceptions.CommandError("Can't change repeat mode! The player is not playing!", expire_in=20)
+        player.repeat() 
+        state = player.repeat_status()
+
+        if state == 1:
+            return Response("[Toggle] Repeat mode: on", delete_after=15)
+        elif state == 0:
+            return Response("[Toggle] Repeat mode: off", delete_after=15)
+        else:
+            raise exceptions.CommandError("Something is wrong but we are not sure why.", expire_in=20)
+
+    
+    async def cmd_repeat_state(self, player):
+        """
+            Usage: 
+                !repeatState
+            Check repeat song state
+        """
+        state = player.repeat_status()
+        if state == 1:
+            return Response("Repeat mode: on", delete_after=15)
+        elif state == 0:
+            return Response("Repeat mode: off", delete_after=15)
+        else:
+            raise exceptions.CommandError("Something is wrong but we are not sure why.", expire_in=20)
+    
+
+
+    async def cmd_uptime(self, channel):
+        """
+        Usage:
+
+        Showing uptime of the musicbot
+        """
+        nowtime = time.time()
+        uptime = nowtime - self.start_time
+        m,s = divmod(uptime, 60)
+        h,m = divmod(m,60)
+        d,h = divmod(h,24)
+        return Response("Current uptime: %ddays %dhrs %dmins %ds" % (d, h, m, s) , delete_after=30)
+
+    async def cmd_play_initiald(self, player, channel, author, permissions):
+        """
+        Usage:
+            !play_initald
+
+        Adds the Initial D playlist into the playlist.  
+        """
+        return await self.cmd_play(player, channel, author, permissions, [], 
+                "https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
+
+    async def cmd_aesthetic(self, player, channel, author, permissions):
+        """
+        Usage:
+            !aesthetic
+
+        Adds a vaporwave playlist into the playlist.  
+        """
+        return await self.cmd_play(player, channel, author, permissions, [], 
+            "https://www.youtube.com/playlist?list=PLK_A0_qspnj20ZweIadBrk1KihKW_ZmNE")
+
+    async def cmd_pladd(self, player, song_url=None):
+        """
+        Usage:
+            !pladd - adding current song
+            !pladd song_url - adding url into playlist
+
+        Adds a song to the autoplaylist.
+        """
+
+        #No url provided
+        if not song_url:
+            #Check if there is something playing and get the information
+            if player._current_entry:
+                song_url = player._current_entry.url
+                title = player._current_entry.title
+
+            else:
+                raise exceptions.CommandError('There is nothing playing.', expire_in=20)
+
+        else:
+            #Get song info from url
+            info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
+            title = info.get('title', '')
+
+            #Verify proper url
+            if not title:
+                raise exceptions.CommandError('Invalid url. Please insure link is a valid YouTube, SoundCloud or BandCamp url.', expire_in=20)
+                
+        #Verify song isn't already in our playlist
+        for url in self.autoplaylist:
+            if song_url == url:
+                return Response("Song already present in autoplaylist.", delete_after=30)
+
+        self.autoplaylist.append(song_url)
+        write_file(self.config.auto_playlist_file, self.autoplaylist)
+        self.autoplaylist = load_file(self.config.auto_playlist_file)
+        return Response("Added %s to autoplaylist." % title, delete_after=30)
+
+    async def cmd_plremove(self, player, song_url=None):
+        """
+        Usage:
+            !plremove current song
+            !plremove song_url
+
+        Remove a song from the autoplaylist.
+        """
+
+        #No url provided
+        if not song_url:
+            #Check if there is something playing
+            if not player._current_entry:
+                raise exceptions.CommandError('There is nothing playing.', expire_in=20)
+
+            #Get the url of the current entry
+            else:
+                song_url = player._current_entry.url
+                title = player._current_entry.title
+
+        else:
+            #Get song info from url
+            info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
+
+            #Verify proper url
+            if not info:
+                raise exceptions.CommandError('Invalid url. Please insure link is a valid YouTube, SoundCloud or BandCamp url.', expire_in=20)
+
+            else:
+                title = info.get('title', '')
+
+#Verify that the song is in our playlist
+        for url in self.autoplaylist:
+            if song_url == url:
+                self.autoplaylist.remove(song_url)
+                write_file(self.config.auto_playlist_file, self.autoplaylist)
+                self.autoplaylist = load_file(self.config.auto_playlist_file)
+                return Response("Removed %s from the autoplaylist." % title, delete_after=30)
+
+        return Response("Song not present in autoplaylist.", delete_after=30) 
+
+    async def cmd_summon(self, channel, author, voice_channel):
+        """
+        Usage:
+            !summon
 
         Call the bot to the summoner's voice channel.
         """
@@ -1776,7 +2029,7 @@ class MusicBot(discord.Client):
     async def cmd_pause(self, player):
         """
         Usage:
-            {command_prefix}pause
+            !pause
 
         Pauses playback of the current song.
         """
@@ -1790,7 +2043,7 @@ class MusicBot(discord.Client):
     async def cmd_resume(self, player):
         """
         Usage:
-            {command_prefix}resume
+            !resume
 
         Resumes playback of a paused song.
         """
@@ -1804,7 +2057,7 @@ class MusicBot(discord.Client):
     async def cmd_shuffle(self, channel, player):
         """
         Usage:
-            {command_prefix}shuffle
+            !shuffle
 
         Shuffles the playlist.
         """
@@ -1828,7 +2081,7 @@ class MusicBot(discord.Client):
     async def cmd_clear(self, player, author):
         """
         Usage:
-            {command_prefix}clear
+            !clear
 
         Clears the playlist.
         """
@@ -1839,7 +2092,7 @@ class MusicBot(discord.Client):
     async def cmd_skip(self, player, channel, author, message, permissions, voice_channel):
         """
         Usage:
-            {command_prefix}skip
+            !skip
 
         Skips the current song when enough votes are cast, or by the bot owner.
         """
@@ -1910,7 +2163,7 @@ class MusicBot(discord.Client):
     async def cmd_volume(self, message, player, new_volume=None):
         """
         Usage:
-            {command_prefix}volume (+/-)[volume]
+            !volume (+/-)[volume]
 
         Sets the playback volume. Accepted values are from 1 to 100.
         Putting + or - before the volume will make the volume change relative to the current volume.
@@ -1953,7 +2206,7 @@ class MusicBot(discord.Client):
     async def cmd_queue(self, channel, player):
         """
         Usage:
-            {command_prefix}queue
+            !queue
 
         Prints the current song queue.
         """
@@ -2002,7 +2255,7 @@ class MusicBot(discord.Client):
     async def cmd_clean(self, message, channel, server, author, search_range=50):
         """
         Usage:
-            {command_prefix}clean [range]
+            !clean [range]
 
         Removes up to [range] messages the bot has posted in chat. Default: 50, Max: 1000
         """
@@ -2057,10 +2310,86 @@ class MusicBot(discord.Client):
 
         return Response('Cleaned up {} message{}.'.format(deleted, 's' * bool(deleted)), delete_after=6)
 
+    def searchSong(self, song_name):
+        print("[Lyrics] Song name: " + song_name)
+        encondedsongname = urllib.parse.quote_plus(song_name)
+        print("[Lyrics] Search url: " + encondedsongname)
+        page = requests.get('http://lyrics.wikia.com/wiki/Special:Search?query=' + encondedsongname)
+        tree = html.fromstring(page.content)
+        songs = tree.xpath('//li[@class="result"]/article/h1/a/text()')
+        return songs
+
+    async def cmd_lyrics(self, channel, player, song_url=None):
+        """
+        Usage:
+            !lyrics 
+            !lyrics song_url
+        Displays the lyrics of the current song, otherwise you have to specify an URL
+        """ 
+            
+        if song_url:                
+            try:
+                info = await self.downloader.extract_info(player.playlist.loop, song_url, download=False, process=False)
+                title = info.get('title', '')
+            except:
+                return Response("Cannot find the title, please ensure you URL is correct")
+        elif not player.current_entry:
+            return Response("No song currently being played, please specify an URL")        
+        else:
+            title = player.current_entry.title
+        await self.send_typing(channel)
+        songsResults = self.searchSong(title)
+
+        for item in songsResults: 
+            try:
+                nameofthesong = item.split(':')[1] 
+                nameofthesong = nameofthesong.split('/')[0]
+            except:
+                pass
+            try:    
+                nameofthesong = nameofthesong.split('`\\')[0]
+            except:
+                pass
+            try:    #too much try/except to remove that /ru from lyricswikia
+                if nameofthesong.lower() not in title.lower():
+                    print("%s was not the song you were looking for don't you ?" % nameofthesong)
+                    continue
+            except:
+                pass
+            try:
+                lyrics = lyricwikia.get_lyrics(item.split(':')[0], item.split(':')[1])    
+                await self.safe_send_message(channel, "Lyrics for " + item.split(':')[0] + " - " + item.split(':')[1])
+                n = 1985
+                for i in range(0, len(lyrics), n):
+                    await self.safe_send_message(channel, "```" + lyrics[i:i+n] + "```")
+                return
+            except:      
+                print("[Lyrics] Failed to get lyric from " + item)
+                try:
+                    count = 0 #don't mind me
+                    artist = item.split(':')[0]
+                    for element in artist.split(' '): 
+                        count += 1                      
+                        artist = artist.split(' ')[0:-count]
+                        artist = ' '.join(artist)
+                        try:    
+                            lyrics = lyricwikia.get_lyrics(artist, item.split(':')[1])    
+                            await self.safe_send_message(channel, "Lyric for " + artist + " - " + item.split(':')[1])
+                            n = 1985
+                            for i in range(0, len(lyrics), n):
+                                await self.safe_send_message(channel, "```" + lyrics[i:i+n] + "```") #feel redundant
+                            return 
+                        except:
+                            pass
+                except:
+                    continue 
+
+        return Response("Could not find the lyric")
+
     async def cmd_pldump(self, channel, song_url):
         """
         Usage:
-            {command_prefix}pldump url
+            !pldump url
 
         Dumps the individual urls of a playlist
         """
@@ -2105,7 +2434,7 @@ class MusicBot(discord.Client):
     async def cmd_listids(self, server, author, leftover_args, cat='all'):
         """
         Usage:
-            {command_prefix}listids [categories]
+            !listids [categories]
 
         Lists the ids for various things.  Categories are:
            all, users, roles, channels
@@ -2163,7 +2492,7 @@ class MusicBot(discord.Client):
     async def cmd_perms(self, author, channel, server, permissions):
         """
         Usage:
-            {command_prefix}perms
+            !perms
 
         Sends the user a list of their permissions.
         """
@@ -2184,7 +2513,7 @@ class MusicBot(discord.Client):
     async def cmd_setname(self, leftover_args, name):
         """
         Usage:
-            {command_prefix}setname name
+            !setname name
 
         Changes the bot's username.
         Note: This operation is limited by discord to twice per hour.
@@ -2208,7 +2537,7 @@ class MusicBot(discord.Client):
     async def cmd_setnick(self, server, channel, leftover_args, nick):
         """
         Usage:
-            {command_prefix}setnick nick
+            !setnick nick
 
         Changes the bot's nickname.
         """
@@ -2229,7 +2558,7 @@ class MusicBot(discord.Client):
     async def cmd_setavatar(self, message, url=None):
         """
         Usage:
-            {command_prefix}setavatar [url]
+            !setavatar [url]
 
         Changes the bot's avatar.
         Attaching a file and leaving the url parameter blank also works.

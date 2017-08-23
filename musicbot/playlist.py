@@ -1,10 +1,13 @@
 import os.path
 import logging
-import datetime
 
 from random import shuffle
 from itertools import islice
+import datetime
+import traceback
 from collections import deque
+from itertools import islice
+from random import shuffle
 
 from urllib.error import URLError
 from youtube_dl.utils import ExtractorError, DownloadError, UnsupportedError
@@ -295,6 +298,21 @@ class Playlist(EventEmitter, Serializable):
         if self.peek() is entry:
             entry.get_ready_future()
 
+    def remove_entry(self, index):
+        del self.entries[index]
+    
+    def push_entry(self, index):
+        self.entries.appendleft(self.entries[index])
+        del self.entries[index+1]
+
+    def promoteLast(self):
+        entry = self.entries.pop()
+        self.entries.appendleft(entry)
+        self.emit('entry-added', playlist=self, entry=entry)
+        entry.get_ready_future()
+
+        return entry
+
     async def get_next_entry(self, predownload_next=True):
         """
             A coroutine which will return the next song or None if no songs left to play.
@@ -336,6 +354,7 @@ class Playlist(EventEmitter, Serializable):
     def count_for_user(self, user):
         return sum(1 for e in self.entries if e.meta.get('author', None) == user)
 
+<<<<<<< HEAD
 
     def __json__(self):
         return self._enclose_json({
@@ -354,3 +373,5 @@ class Playlist(EventEmitter, Serializable):
         # TODO: create a function to init downloading (since we don't do it here)?
         return pl
 
+=======
+>>>>>>> master
