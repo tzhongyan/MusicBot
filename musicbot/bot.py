@@ -1413,7 +1413,8 @@ class MusicBot(discord.Client):
 
         Adds the Initial D playlist into the playlist.  
         """
-        return Response("!play https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
+        return await self.cmd_play(player, channel, author, permissions, [], 
+                "https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
 
     async def cmd_aesthetic(self, player, channel, author, permissions):
         """
@@ -1422,7 +1423,8 @@ class MusicBot(discord.Client):
 
         Adds a vaporwave playlist into the playlist.  
         """
-        return Response("!play https://www.youtube.com/playlist?list=PLK_A0_qspnj20ZweIadBrk1KihKW_ZmNE")
+        return await self.cmd_play(player, channel, author, permissions, [], 
+            "https://www.youtube.com/playlist?list=PLK_A0_qspnj20ZweIadBrk1KihKW_ZmNE")
 
     async def cmd_pladd(self, player, song_url=None):
         """
@@ -1864,7 +1866,7 @@ class MusicBot(discord.Client):
             except:
                 pass
             try:    #too much try/except to remove that /ru from lyricswikia
-                if nameofthesong not in title:
+                if nameofthesong.lower() not in title.lower():
                     print("%s was not the song you were looking for don't you ?" % nameofthesong)
                     continue
             except:
@@ -2109,12 +2111,9 @@ class MusicBot(discord.Client):
         if not message_content.startswith(self.config.command_prefix):
             return
 
-        # for play_initiald to work :3
-        """
         if message.author == self.user:
             self.safe_print("Ignoring command from myself (%s)" % message.content)
             return
-        """
 
         if self.config.bound_channels and message.channel.id not in self.config.bound_channels and not message.channel.is_private:
             return  # if I want to log this I just move it under the prefix check
