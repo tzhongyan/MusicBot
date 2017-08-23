@@ -1,5 +1,4 @@
-discord.py[voice] ~= 0.12.0
+discord.py[voice] ~= 0.13.0
 youtube_dl
 pip
-lyricwikia
-lxml
+
