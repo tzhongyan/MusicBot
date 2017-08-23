@@ -9,19 +9,10 @@ import logging
 import asyncio
 import pathlib
 import traceback
-# import urllib.parse
-# import lyricwikia
-# import requests
 
 import aiohttp
 import discord
 import colorlog
-from discord import utils
-from discord.object import Object
-from discord.enums import ChannelType
-from discord.voice_client import VoiceClient
-from discord.ext.commands.bot import _get_variable
-# from lxml import html
 
 from io import BytesIO, StringIO
 from functools import wraps
@@ -32,12 +23,6 @@ from collections import defaultdict
 from discord.enums import ChannelType
 from discord.ext.commands.bot import _get_variable
 from discord.http import _func_
-from musicbot.playlist import Playlist
-from musicbot.player import MusicPlayer
-from musicbot.config import Config, ConfigDefaults
-from musicbot.permissions import Permissions, PermissionsDefaults
-from musicbot.utils import load_file, write_file, sane_round_int, illegal_char
-
 
 from . import exceptions
 from . import downloader
@@ -54,8 +39,17 @@ from .utils import load_file, write_file, sane_round_int, fixg, ftimedelta
 from .constants import VERSION as BOTVERSION
 from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
 
+# import urllib.parse
+# import lyricwikia
+# import requests
+
+# from lxml import html
+
 
 load_opus_lib()
+
+log = logging.getLogger(__name__)
+
 
 class SkipState:
     def __init__(self):
