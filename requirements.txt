@@ -1,4 +1,4 @@
 discord.py[voice] ~= 0.13.0
 youtube_dl
 pip
-
+colorlog

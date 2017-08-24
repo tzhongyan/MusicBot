@@ -409,6 +409,7 @@ def main():
 
     print()
     log.info("All done.")
+    exit()
 
 
 if __name__ == '__main__':

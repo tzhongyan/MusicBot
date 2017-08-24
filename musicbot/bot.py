@@ -44,6 +44,12 @@ from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
 # import requests
 # from lxml import html
 
+# import urllib.parse
+# import lyricwikia
+# import requests
+
+# from lxml import html
+
 
 load_opus_lib()
 
@@ -79,7 +85,13 @@ class Response:
 class MusicBot(discord.Client):
 
 
-    def __init__(self, config_file=ConfigDefaults.options_file, perms_file=PermissionsDefaults.perms_file):
+    def __init__(self, config_file=None, perms_file=None):
+        if config_file is None:
+            config_file = ConfigDefaults.options_file
+
+        if perms_file is None:
+            perms_file = PermissionsDefaults.perms_file
+
         self.players = {}
         self.exit_signal = None
         self.init_ok = False
