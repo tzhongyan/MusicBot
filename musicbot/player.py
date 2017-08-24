@@ -103,7 +103,7 @@ class MusicPlayerRepeatState(Enum):
         return self.name
 
 
-class MusicPlayer(EventEmitter):
+class MusicPlayer(EventEmitter, Serializable):
     def __init__(self, bot, voice_client, playlist):
         super().__init__()
         self.bot = bot
