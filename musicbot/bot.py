@@ -39,17 +39,6 @@ from .utils import load_file, write_file, sane_round_int, fixg, ftimedelta
 
 from .constants import VERSION as BOTVERSION
 from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
-# import urllib.parse
-# import lyricwikia
-# import requests
-# from lxml import html
-
-# import urllib.parse
-# import lyricwikia
-# import requests
-
-# from lxml import html
-
 
 load_opus_lib()
 
@@ -639,27 +628,12 @@ class MusicBot(discord.Client):
         channel = entry.meta.get('channel', None)
         author = entry.meta.get('author', None)
 
-        if channel and author:
-            last_np_msg = self.server_specific_data[channel.server]['last_np_msg']
-            if last_np_msg and last_np_msg.channel == channel:
+        if author and self.config.now_playing_mentions:
+            newmsg = '%s - your song **%s** is now playing in %s!' % (
+                entry.meta['author'].mention, entry.title, player.voice_client.channel.name)
+            await self.safe_send_message(channel, newmsg)
 
-                async for lmsg in self.logs_from(channel, limit=1):
-                    if lmsg != last_np_msg and last_np_msg:
-                        await self.safe_delete_message(last_np_msg)
-                        self.server_specific_data[channel.server]['last_np_msg'] = None
-                    break  # This is probably redundant
-
-            if self.config.now_playing_mentions:
-                newmsg = '%s - your song **%s** is now playing in %s!' % (
-                    entry.meta['author'].mention, entry.title, player.voice_client.channel.name)
-            else:
-                newmsg = 'Now playing in %s: **%s**' % (
-                    player.voice_client.channel.name, entry.title)
-
-            if self.server_specific_data[channel.server]['last_np_msg']:
-                self.server_specific_data[channel.server]['last_np_msg'] = await self.safe_edit_message(last_np_msg, newmsg, send_if_fail=True)
-            else:
-                self.server_specific_data[channel.server]['last_np_msg'] = await self.safe_send_message(channel, newmsg)
+        await self.cmd_np(player, channel)
 
         # TODO: Check channel voice state?
 
@@ -1737,7 +1711,7 @@ class MusicBot(discord.Client):
 
         return Response("Oh well \N{SLIGHTLY FROWNING FACE}", delete_after=30)
 
-    async def cmd_np(self, player, channel, server, message):
+    async def cmd_np(self, player, channel):
         """
         Usage:
             !np
@@ -1746,10 +1720,6 @@ class MusicBot(discord.Client):
         """
 
         if player.current_entry:
-            if self.server_specific_data[server]['last_np_msg']:
-                await self.safe_delete_message(self.server_specific_data[server]['last_np_msg'])
-                self.server_specific_data[server]['last_np_msg'] = None
-
             # TODO: Fix timedelta garbage with util function
             song_progress = ftimedelta(timedelta(seconds=player.progress))
             song_total = ftimedelta(timedelta(seconds=player.current_entry.duration))
@@ -1776,8 +1746,7 @@ class MusicBot(discord.Client):
                     url=player.current_entry.url
                 )
 
-            self.server_specific_data[server]['last_np_msg'] = await self.safe_send_message(channel, np_text)
-            await self._manual_delete_check(message)
+            await self.safe_send_message(channel, np_text)
         else:
             return Response(
                 'There are no songs queued! Queue something with {}play.'.format(self.config.command_prefix),
@@ -2208,7 +2177,7 @@ class MusicBot(discord.Client):
                 raise exceptions.CommandError(
                     'Unreasonable volume provided: {}%. Provide a value between 1 and 100.'.format(new_volume), expire_in=20)
 
-    async def cmd_queue(self, channel, player):
+    async def cmd_queue(self, channel, player, server):
         """
         Usage:
             !queue
@@ -2221,16 +2190,7 @@ class MusicBot(discord.Client):
         andmoretext = '* ... and %s more*' % ('x' * len(player.playlist.entries))
 
         if player.current_entry:
-            # TODO: Fix timedelta garbage with util function
-            song_progress = ftimedelta(timedelta(seconds=player.progress))
-            song_total = ftimedelta(timedelta(seconds=player.current_entry.duration))
-            prog_str = '`[%s/%s]`' % (song_progress, song_total)
-
-            if player.current_entry.meta.get('channel', False) and player.current_entry.meta.get('author', False):
-                lines.append("Currently Playing: **%s** added by **%s** %s\n" % (
-                    player.current_entry.title, player.current_entry.meta['author'].name, prog_str))
-            else:
-                lines.append("Now Playing: **%s** %s\n" % (player.current_entry.title, prog_str))
+            await self.cmd_np(player, channel)
 
         for i, item in enumerate(player.playlist, 1):
             if item.meta.get('channel', False) and item.meta.get('author', False):
@@ -2314,82 +2274,6 @@ class MusicBot(discord.Client):
                         pass
 
         return Response('Cleaned up {} message{}.'.format(deleted, 's' * bool(deleted)), delete_after=6)
-
-    # def searchSong(self, song_name):
-    #     print("[Lyrics] Song name: " + song_name)
-    #     encondedsongname = urllib.parse.quote_plus(song_name)
-    #     print("[Lyrics] Search url: " + encondedsongname)
-    #     page = requests.get('http://lyrics.wikia.com/wiki/Special:Search?query=' + encondedsongname)
-    #     tree = html.fromstring(page.content)
-    #     songs = tree.xpath('//li[@class="result"]/article/h1/a/text()')
-    #     return songs
-
-    # async def cmd_lyrics(self, channel, player, song_url=None):
-    #     """
-    #     Usage:
-    #         !lyrics 
-    #         !lyrics song_url
-    #     Displays the lyrics of the current song, otherwise you have to specify an URL
-    #     """ 
-            
-    #     if song_url:                
-    #         try:
-    #             info = await self.downloader.extract_info(player.playlist.loop, song_url, download=False, process=False)
-    #             title = info.get('title', '')
-    #         except:
-    #             return Response("Cannot find the title, please ensure you URL is correct")
-    #     elif not player.current_entry:
-    #         return Response("No song currently being played, please specify an URL")        
-    #     else:
-    #         title = player.current_entry.title
-    #     await self.send_typing(channel)
-    #     songsResults = self.searchSong(title)
-
-    #     for item in songsResults: 
-    #         try:
-    #             nameofthesong = item.split(':')[1] 
-    #             nameofthesong = nameofthesong.split('/')[0]
-    #         except:
-    #             pass
-    #         try:    
-    #             nameofthesong = nameofthesong.split('`\\')[0]
-    #         except:
-    #             pass
-    #         try:    #too much try/except to remove that /ru from lyricswikia
-    #             if nameofthesong.lower() not in title.lower():
-    #                 print("%s was not the song you were looking for don't you ?" % nameofthesong)
-    #                 continue
-    #         except:
-    #             pass
-    #         try:
-    #             lyrics = lyricwikia.get_lyrics(item.split(':')[0], item.split(':')[1])    
-    #             await self.safe_send_message(channel, "Lyrics for " + item.split(':')[0] + " - " + item.split(':')[1])
-    #             n = 1985
-    #             for i in range(0, len(lyrics), n):
-    #                 await self.safe_send_message(channel, "```" + lyrics[i:i+n] + "```")
-    #             return
-    #         except:      
-    #             print("[Lyrics] Failed to get lyric from " + item)
-    #             try:
-    #                 count = 0 #don't mind me
-    #                 artist = item.split(':')[0]
-    #                 for element in artist.split(' '): 
-    #                     count += 1                      
-    #                     artist = artist.split(' ')[0:-count]
-    #                     artist = ' '.join(artist)
-    #                     try:    
-    #                         lyrics = lyricwikia.get_lyrics(artist, item.split(':')[1])    
-    #                         await self.safe_send_message(channel, "Lyric for " + artist + " - " + item.split(':')[1])
-    #                         n = 1985
-    #                         for i in range(0, len(lyrics), n):
-    #                             await self.safe_send_message(channel, "```" + lyrics[i:i+n] + "```") #feel redundant
-    #                         return 
-    #                     except:
-    #                         pass
-    #             except:
-    #                 continue 
-
-        return Response("Could not find the lyric")
 
     async def cmd_pldump(self, channel, song_url):
         """
