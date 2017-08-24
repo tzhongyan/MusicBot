@@ -621,6 +621,7 @@ class MusicBot(discord.Client):
     async def on_player_play(self, player, entry):
         await self.update_now_playing_status(entry)
         player.skip_state.reset()
+        repeat_state = player.repeat_status()
 
         # This is the one event where its ok to serialize autoplaylist entries
         await self.serialize_queue(player.voice_client.channel.server)
@@ -628,12 +629,12 @@ class MusicBot(discord.Client):
         channel = entry.meta.get('channel', None)
         author = entry.meta.get('author', None)
 
-        if author and self.config.now_playing_mentions:
-            newmsg = '%s - your song **%s** is now playing in %s!' % (
-                entry.meta['author'].mention, entry.title, player.voice_client.channel.name)
-            await self.safe_send_message(channel, newmsg)
-
-        await self.cmd_np(player, channel)
+        if not repeat_state:
+            if author and self.config.now_playing_mentions:
+                newmsg = '%s - your song **%s** is now playing in %s!' % (
+                    entry.meta['author'].mention, entry.title, player.voice_client.channel.name)
+                await self.safe_send_message(channel, newmsg)
+            await self.cmd_np(player, channel)
 
         # TODO: Check channel voice state?
 
