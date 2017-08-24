@@ -629,7 +629,7 @@ class MusicBot(discord.Client):
         channel = entry.meta.get('channel', None)
         author = entry.meta.get('author', None)
 
-        if not repeat_state:
+        if channel and not repeat_state:
             if author and self.config.now_playing_mentions:
                 newmsg = '%s - your song **%s** is now playing in %s!' % (
                     entry.meta['author'].mention, entry.title, player.voice_client.channel.name)
