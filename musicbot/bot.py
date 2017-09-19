@@ -1811,6 +1811,16 @@ class MusicBot(discord.Client):
             raise exceptions.CommandError("You can't remove the current song (skip it instead), or a song in a position that doesn't exist.", expire_in=20)
 
 
+    async def cmd_push(self, message, player, index):
+        """
+        Usage:
+            !push [number]
+        
+        Alias for `!prioritise` Push a song from the queue at the given position to the top of queue.
+        """
+        return await self.cmd_prioritise(message, player, index)
+
+
     async def cmd_repeat(self, player):
         """
             Usage:
@@ -1878,6 +1888,36 @@ class MusicBot(discord.Client):
         """
         return await self.cmd_play(player, channel, author, permissions, [], 
             "https://www.youtube.com/playlist?list=PLK_A0_qspnj20ZweIadBrk1KihKW_ZmNE")
+
+    async def cmd_initiald(self, player, channel, author, permissions):
+        """
+        Usage:
+            !initald
+
+        Alias for !play_initiald
+        """
+        return await self.cmd_play(player, channel, author, permissions, [], 
+                "https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
+
+    async def cmd_wubwub(self, player, channel, author, permissions):
+        """
+        Usage:
+            !wubwub
+
+        Adds a dubstep-ish playlist into queue.
+        """
+        return await self.cmd_play(player, channel, author, permissions, [], 
+                "https://www.youtube.com/playlist?list=PLK_A0_qspnj3KcOrewn1Rvu_57vD6h751")
+
+    async def cmd_weeb(self, player, channel, author, permissions):
+        """
+        Usage:
+            !weeb
+
+        Adds a weeb playlist into queue.
+        """
+        return await self.cmd_play(player, channel, author, permissions, [], 
+                "https://www.youtube.com/playlist?list=PLK_A0_qspnj0vBxBQ9TTsl5HCuZN3DX1u")
 
     async def cmd_pladd(self, player, song_url=None):
         """
