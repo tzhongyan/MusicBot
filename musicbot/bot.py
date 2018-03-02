@@ -2120,54 +2120,54 @@ class MusicBot(discord.Client):
         d,h = divmod(h,24)
         return Response("Current uptime: %ddays %dhrs %dmins %ds" % (d, h, m, s) , delete_after=30)
 
-    async def cmd_play_initiald(self, player, channel, author, permissions):
+    async def cmd_play_initiald(self, message, player, channel, author, permissions):
         """
         Usage:
             !play_initald
 
         Adds the Initial D playlist into the playlist.  
         """
-        return await self.cmd_play(player, channel, author, permissions, [], 
+        return await self.cmd_play(message, player, channel, author, permissions, [], 
                 "https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
 
-    async def cmd_aesthetic(self, player, channel, author, permissions):
+    async def cmd_aesthetic(self, message, player, channel, author, permissions):
         """
         Usage:
             !aesthetic
 
         Adds a vaporwave playlist into the playlist.  
         """
-        return await self.cmd_play(player, channel, author, permissions, [], 
+        return await self.cmd_play(message, player, channel, author, permissions, [], 
             "https://www.youtube.com/playlist?list=PLK_A0_qspnj20ZweIadBrk1KihKW_ZmNE")
 
-    async def cmd_initiald(self, player, channel, author, permissions):
+    async def cmd_initiald(self, message, player, channel, author, permissions):
         """
         Usage:
             !initald
 
         Alias for !play_initiald
         """
-        return await self.cmd_play(player, channel, author, permissions, [], 
+        return await self.cmd_play(message, player, channel, author, permissions, [], 
                 "https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
 
-    async def cmd_wubwub(self, player, channel, author, permissions):
+    async def cmd_wubwub(self, message, player, channel, author, permissions):
         """
         Usage:
             !wubwub
 
         Adds a dubstep-ish playlist into queue.
         """
-        return await self.cmd_play(player, channel, author, permissions, [], 
+        return await self.cmd_play(message, player, channel, author, permissions, [], 
                 "https://www.youtube.com/playlist?list=PLK_A0_qspnj3KcOrewn1Rvu_57vD6h751")
 
-    async def cmd_weeb(self, player, channel, author, permissions):
+    async def cmd_weeb(self, message, player, channel, author, permissions):
         """
         Usage:
             !weeb
 
         Adds a weeb playlist into queue.
         """
-        return await self.cmd_play(player, channel, author, permissions, [], 
+        return await self.cmd_play(message, player, channel, author, permissions, [], 
                 "https://www.youtube.com/playlist?list=PLK_A0_qspnj0vBxBQ9TTsl5HCuZN3DX1u")
 
     async def cmd_pladd(self, player, song_url=None):
