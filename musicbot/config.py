@@ -45,6 +45,7 @@ class Config:
 
         self.command_prefix = config.get('Chat', 'CommandPrefix', fallback=ConfigDefaults.command_prefix)
         self.bound_channels = config.get('Chat', 'BindToChannels', fallback=ConfigDefaults.bound_channels)
+        self.unbound_servers = config.getboolean('Chat', 'AllowUnboundServers', fallback=ConfigDefaults.unbound_servers)
         self.autojoin_channels =  config.get('Chat', 'AutojoinChannels', fallback=ConfigDefaults.autojoin_channels)
 
         self.default_volume = config.getfloat('MusicBot', 'DefaultVolume', fallback=ConfigDefaults.default_volume)
@@ -66,6 +67,9 @@ class Config:
         self.embeds = config.getboolean('MusicBot', 'UseEmbeds', fallback=ConfigDefaults.embeds)
         self.queue_length = config.getint('MusicBot', 'QueueLength', fallback=ConfigDefaults.queue_length)
         self.remove_ap = config.getboolean('MusicBot', 'RemoveFromAPOnError', fallback=ConfigDefaults.remove_ap)
+        self.show_config_at_start = config.getboolean('MusicBot', 'ShowConfigOnLaunch', fallback=ConfigDefaults.show_config_at_start)
+        self.legacy_skip = config.getboolean('MusicBot', 'LegacySkip', fallback=ConfigDefaults.legacy_skip)
+        self.leavenonowners = config.getboolean('MusicBot', 'LeaveServersWithoutOwner', fallback=ConfigDefaults.leavenonowners)
 
         self.debug_level = config.get('MusicBot', 'DebugLevel', fallback=ConfigDefaults.debug_level)
         self.debug_level_str = self.debug_level
@@ -78,8 +82,30 @@ class Config:
 
         self.run_checks()
 
+        self.missing_keys = set()
+        self.check_changes(config)
+
         self.find_autoplaylist()
 
+    def get_all_keys(self, conf):
+        """Returns all config keys as a list"""
+        sects = dict(conf.items())
+        keys = []
+        for k in sects:
+            s = sects[k]
+            keys += [key for key in s.keys()]
+        return keys
+
+    def check_changes(self, conf):
+        exfile = 'config/example_options.ini'
+        if os.path.isfile(exfile):
+            usr_keys = self.get_all_keys(conf)
+            exconf = configparser.ConfigParser(interpolation=None)
+            if not exconf.read(exfile, encoding='utf-8'):
+                return
+            ex_keys = self.get_all_keys(exconf)
+            if set(usr_keys) != set(ex_keys):
+                self.missing_keys = set(ex_keys) - set(usr_keys)  # to raise this as an issue in bot.py later
 
     def run_checks(self):
         """
@@ -123,6 +149,7 @@ class Config:
                         "instructions in the options or ask in the help server.",
                         preface=self._confpreface
                     )
+                self.owner_id = int(self.owner_id)
 
             elif self.owner_id == 'auto':
                 pass # defer to async check
@@ -139,14 +166,14 @@ class Config:
 
         if self.bound_channels:
             try:
-                self.bound_channels = set(x for x in self.bound_channels.split() if x)
+                self.bound_channels = set(x for x in self.bound_channels.replace(',', ' ').split() if x)
             except:
                 log.warning("BindToChannels data is invalid, will not bind to any channels")
                 self.bound_channels = set()
 
         if self.autojoin_channels:
             try:
-                self.autojoin_channels = set(x for x in self.autojoin_channels.split() if x)
+                self.autojoin_channels = set(x for x in self.autojoin_channels.replace(',', ' ').split() if x)
             except:
                 log.warning("AutojoinChannels data is invalid, will not autojoin any channels")
                 self.autojoin_channels = set()
@@ -157,9 +184,9 @@ class Config:
 
         self.delete_invoking = self.delete_invoking and self.delete_messages
 
-        self.bound_channels = set(item.replace(',', ' ').strip() for item in self.bound_channels)
+        self.bound_channels = set(int(item) for item in self.bound_channels)
 
-        self.autojoin_channels = set(item.replace(',', ' ').strip() for item in self.autojoin_channels)
+        self.autojoin_channels = set(int(item) for item in self.autojoin_channels)
 
         ap_path, ap_name = os.path.split(self.auto_playlist_file)
         apn_name, apn_ext = os.path.splitext(ap_name)
@@ -285,6 +312,7 @@ class ConfigDefaults:
 
     command_prefix = '!'
     bound_channels = set()
+    unbound_servers = False
     autojoin_channels = set()
 
     default_volume = 0.15
@@ -307,6 +335,9 @@ class ConfigDefaults:
     embeds = True
     queue_length = 10
     remove_ap = True
+    show_config_at_start = False
+    legacy_skip = False
+    leavenonowners = False
 
     options_file = 'config/options.ini'
     blacklist_file = 'config/blacklist.txt'
