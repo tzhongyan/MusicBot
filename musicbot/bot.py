@@ -1137,7 +1137,7 @@ class MusicBot(discord.Client):
     async def cmd_help(self, message, channel, command=None):
         """
         Usage:
-            !help [command]
+            {command_prefix}help [command]
 
         Prints a help message.
         If a command is specified, it prints a help message for that command.
@@ -1181,7 +1181,7 @@ class MusicBot(discord.Client):
     async def cmd_blacklist(self, message, user_mentions, option, something):
         """
         Usage:
-            !blacklist [ + | - | add | remove ] @UserName [@UserName2 ...]
+            {command_prefix}blacklist [ + | - | add | remove ] @UserName [@UserName2 ...]
 
         Add or remove users to the blacklist.
         Blacklisted users are forbidden from using bot commands.
@@ -1228,7 +1228,7 @@ class MusicBot(discord.Client):
     async def cmd_id(self, author, user_mentions):
         """
         Usage:
-            !id [@user]
+            {command_prefix}id [@user]
 
         Tells the user their id or the id of another user.
         """
@@ -1263,7 +1263,7 @@ class MusicBot(discord.Client):
     async def cmd_joinserver(self, message, server_link=None):
         """
         Usage:
-            !joinserver invite_link
+            {command_prefix}joinserver invite_link
 
         Asks the bot to join a server.  Note: Bot accounts cannot use invite links.
         """
@@ -1698,7 +1698,7 @@ class MusicBot(discord.Client):
     async def cmd_search(self, message, player, channel, author, permissions, leftover_args):
         """
         Usage:
-            !search [service] [number] query
+            {command_prefix}search [service] [number] query
 
         Searches a service for a video and adds it to the queue.
         - service: any one of the following services:
@@ -1823,11 +1823,10 @@ class MusicBot(discord.Client):
     async def cmd_np(self, player, channel, guild, message):
         """
         Usage:
-            !np
+            {command_prefix}np
 
         Displays the current song in chat.
         """
-
         if player.current_entry:
             if self.server_specific_data[guild]['last_np_msg']:
                 await self.safe_delete_message(self.server_specific_data[guild]['last_np_msg'])
@@ -1889,7 +1888,7 @@ class MusicBot(discord.Client):
     async def cmd_remove(self, message, player, index):
         """
         Usage:
-            !remove [number]
+            {command_prefix}remove [number]
         
         Removes a song from the queue at the given position, where the position is a number from {command_prefix}queue.
         """
@@ -1917,7 +1916,7 @@ class MusicBot(discord.Client):
     async def cmd_prioritise(self, message, player, index):
         """
         Usage:
-            !prioritise [number]
+            {command_prefix}prioritise [number]
         
         Push a song from the queue at the given position to the top of queue.
         """
@@ -1942,17 +1941,6 @@ class MusicBot(discord.Client):
         else:
             raise exceptions.CommandError("You can't remove the current song (skip it instead), or a song in a position that doesn't exist.", expire_in=20)
 
-
-    async def cmd_push(self, message, player, index):
-        """
-        Usage:
-            !push [number]
-        
-        Alias for `!prioritise` Push a song from the queue at the given position to the top of queue.
-        """
-        return await self.cmd_prioritise(message, player, index)
-
-
     async def cmd_repeat(self, player):
         """
             Usage:
@@ -1970,7 +1958,6 @@ class MusicBot(discord.Client):
             return Response("[Toggle] Repeat mode: off", delete_after=15)
         else:
             raise exceptions.CommandError("Something is wrong but we are not sure why.", expire_in=20)
-
     
     async def cmd_repeat_state(self, player):
         """
@@ -1986,8 +1973,6 @@ class MusicBot(discord.Client):
         else:
             raise exceptions.CommandError("Something is wrong but we are not sure why.", expire_in=20)
     
-
-
     async def cmd_uptime(self, channel):
         """
         Usage:
@@ -2021,15 +2006,6 @@ class MusicBot(discord.Client):
         return await self.cmd_play(message, player, channel, author, permissions, [], 
             "https://www.youtube.com/playlist?list=PLK_A0_qspnj20ZweIadBrk1KihKW_ZmNE")
 
-    async def cmd_initiald(self, message, player, channel, author, permissions):
-        """
-        Usage:
-            !initald
-
-        Alias for !play_initiald
-        """
-        return await self.cmd_play(message, player, channel, author, permissions, [], 
-                "https://www.youtube.com/playlist?list=PLK_A0_qspnj020-BbBHci644bK3wrgSKq")
 
     async def cmd_wubwub(self, message, player, channel, author, permissions):
         """
@@ -2464,14 +2440,14 @@ class MusicBot(discord.Client):
             else:
                 raise exceptions.CommandError(self.str.get('cmd-option-invalid-param' ,'The parameters provided were invalid.'))
 
-    async def cmd_queue(self, channel, player, server):
+    async def cmd_queue(self, channel, player):
         """
         Usage:
-            !queue
+            {command_prefix}queue
 
         Prints the current song queue.
         """
-
+        
         lines = []
         unlisted = 0
         andmoretext = '* ... and %s more*' % ('x' * len(player.playlist.entries))
@@ -2487,7 +2463,6 @@ class MusicBot(discord.Client):
                     player.current_entry.title, player.current_entry.meta['author'].name, prog_str))
             else:
                 lines.append(self.str.get('cmd-queue-playing-noauthor', "Currently playing: `{0}` {1}\n").format(player.current_entry.title, prog_str))
-
 
         for i, item in enumerate(player.playlist, 1):
             if item.meta.get('channel', False) and item.meta.get('author', False):
@@ -2517,7 +2492,7 @@ class MusicBot(discord.Client):
     async def cmd_clean(self, message, channel, guild, author, search_range=50):
         """
         Usage:
-            !clean [range]
+            {command_prefix}clean [range]
 
         Removes up to [range] messages the bot has posted in chat. Default: 50, Max: 1000
         """
@@ -2551,7 +2526,7 @@ class MusicBot(discord.Client):
     async def cmd_pldump(self, channel, author, song_url):
         """
         Usage:
-            !pldump url
+            {command_prefix}pldump url
 
         Dumps the individual urls of a playlist
         """
@@ -2596,7 +2571,7 @@ class MusicBot(discord.Client):
     async def cmd_listids(self, guild, author, leftover_args, cat='all'):
         """
         Usage:
-            !listids [categories]
+            {command_prefix}listids [categories]
 
         Lists the ids for various things.  Categories are:
            all, users, roles, channels
@@ -2679,7 +2654,7 @@ class MusicBot(discord.Client):
     async def cmd_setname(self, leftover_args, name):
         """
         Usage:
-            !setname name
+            {command_prefix}setname name
 
         Changes the bot's username.
         Note: This operation is limited by discord to twice per hour.
@@ -2703,7 +2678,7 @@ class MusicBot(discord.Client):
     async def cmd_setnick(self, guild, channel, leftover_args, nick):
         """
         Usage:
-            !setnick nick
+            {command_prefix}setnick nick
 
         Changes the bot's nickname.
         """
@@ -2724,7 +2699,7 @@ class MusicBot(discord.Client):
     async def cmd_setavatar(self, message, url=None):
         """
         Usage:
-            !setavatar [url]
+            {command_prefix}setavatar [url]
 
         Changes the bot's avatar.
         Attaching a file and leaving the url parameter blank also works.
@@ -2758,6 +2733,7 @@ class MusicBot(discord.Client):
         await self.disconnect_voice_client(guild)
         return Response("Disconnected from `{0.name}`".format(guild), delete_after=20)
 
+    @owner_only
     async def cmd_restart(self, channel):
         """
         Usage:
@@ -2777,6 +2753,7 @@ class MusicBot(discord.Client):
         await self.disconnect_all_voice_clients()
         raise exceptions.RestartSignal()
 
+    @owner_only
     async def cmd_shutdown(self, channel):
         """
         Usage:
