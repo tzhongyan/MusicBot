@@ -206,10 +206,6 @@ class MusicPlayer(EventEmitter, Serializable):
     def _playback_finished(self, error=None):
         entry = self._current_entry
 
-        if self.repeatState == MusicPlayerRepeatState.YES:
-            self.playlist._add_entry(entry)
-            self.playlist.promoteLast()
-
         if self._current_player:
             self._current_player.after = None
             self._kill_current_player()
@@ -220,6 +216,15 @@ class MusicPlayer(EventEmitter, Serializable):
             # I'm not sure that this would ever not be done if it gets to this point
             # unless ffmpeg is doing something highly questionable
             self.emit('error', player=self, entry=entry, ex=self._stderr_future.exception())
+
+        # play if stopped in repeat state
+        if not self.is_stopped and not self.is_dead and self.repeatState == MusicPlayerRepeatState.YES:
+            self.play(_continue=True)
+
+        # put the song back onto queue for repeat
+        if self.repeatState == MusicPlayerRepeatState.YES:
+            self.playlist._add_entry(entry)
+            self.playlist.promoteLast()
 
         if not self.bot.config.save_videos and entry:
             if not isinstance(entry, StreamPlaylistEntry):
@@ -248,6 +253,13 @@ class MusicPlayer(EventEmitter, Serializable):
                             os.path.relpath(filename)))
 
         self.emit('finished-playing', player=self, entry=entry)
+
+    def repeat_err(self, popen:subprocess.Popen, future:asyncio.Future):
+        data = popen.stderr.readline()
+        if data:
+            if self.MusicPlayerRepeatState.YES:
+                self.MusicPlayerRepeatState = self.MusicPlayerRepeatState.NONE
+                log.info("An error occured, no longer repeating!")
 
     def _kill_current_player(self):
         if self._current_player:
@@ -329,6 +341,14 @@ class MusicPlayer(EventEmitter, Serializable):
                 )
 
                 stderr_thread.start()
+
+                repeat_error_catch = Thread(
+                    target = self.repeat_err,
+                    args=(self._current_player._player.source.original._process, self._stderr_future),
+                    name="stderr reader"
+                )
+
+                repeat_error_catch.start()
 
                 self.emit('play', player=self, entry=entry)
 
