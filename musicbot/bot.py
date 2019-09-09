@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -48,32 +47,6 @@ load_opus_lib()
 log = logging.getLogger(__name__)
 
 
-class SkipState:
-    def __init__(self):
-        self.skippers = set()
-        self.skip_msgs = set()
-
-    @property
-    def skip_count(self):
-        return len(self.skippers)
-
-    def reset(self):
-        self.skippers.clear()
-        self.skip_msgs.clear()
-
-    def add_skipper(self, skipper, msg):
-        self.skippers.add(skipper)
-        self.skip_msgs.add(msg)
-        return self.skip_count
-
-
-class Response:
-    def __init__(self, content, reply=False, delete_after=0):
-        self.content = content
-        self.reply = reply
-        self.delete_after = delete_after
-
-
 class MusicBot(discord.Client):
     def __init__(self, config_file=None, perms_file=None, aliases_file=None):
         try:
@@ -97,10 +70,6 @@ class MusicBot(discord.Client):
         self.init_ok = False
         self.cached_app_info = None
         self.last_status = None
-        self.the_voice_clients = {}
-        self.locks = defaultdict(asyncio.Lock)
-        self.voice_client_connect_lock = asyncio.Lock()
-        self.voice_client_move_lock = asyncio.Lock()
         self.start_time = 0
 
         self.config = Config(config_file)
@@ -124,7 +93,7 @@ class MusicBot(discord.Client):
         self.init_ok = False
         self.cached_client_id = None
 
-        log.info('Starting MusicBot (version {}) '.format(BOTVERSION).center(50, '='))
+        log.info('Starting MusicBot {}'.format(BOTVERSION))
 
         if not self.autoplaylist:
             log.warning("Autoplaylist is empty, disabling.")

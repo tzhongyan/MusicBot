@@ -366,7 +366,7 @@ class MusicPlayer(EventEmitter, Serializable):
 
                 repeat_error_catch = Thread(
                     target = self.repeat_err,
-                    args=(self._current_player._player.source.original._process, self._stderr_future),
+                    args=(self._source._source.original._process, self._stderr_future),
                     name="stderr reader"
                 )
 
