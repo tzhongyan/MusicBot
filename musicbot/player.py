@@ -277,8 +277,8 @@ class MusicPlayer(EventEmitter, Serializable):
     def repeat_err(self, popen:subprocess.Popen, future:asyncio.Future):
         data = popen.stderr.readline()
         if data:
-            if self.MusicPlayerRepeatState.YES:
-                self.MusicPlayerRepeatState = self.MusicPlayerRepeatState.NONE
+            if self.repeatState == MusicPlayerRepeatState.YES:
+                self.repeatState = self.MusicPlayerRepeatState.NONE
                 log.info("An error occured, no longer repeating!")
 
     def _kill_current_player(self):
