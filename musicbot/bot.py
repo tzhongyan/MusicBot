@@ -2122,7 +2122,7 @@ class MusicBot(discord.Client):
         Usage:
             {command_prefix}play_localist
         """
-        # TODO: test this
+        await self.send_typing(channel)
         plist = load_file('config/localist.txt')
         for item in plist:
             try:
