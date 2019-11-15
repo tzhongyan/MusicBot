@@ -1956,7 +1956,7 @@ class MusicBot(discord.Client):
     async def cmd_repeat(self, player):
         """
             Usage:
-                !repeat
+                {command_prefix}repeat
             Toggle repeat on current song on/off.
         """
         if player.is_stopped:
@@ -1974,7 +1974,7 @@ class MusicBot(discord.Client):
     async def cmd_repeat_state(self, player):
         """
             Usage: 
-                !repeatState
+                {command_prefix}repeatState
             Check repeat song state
         """
         state = player.repeat_status()
@@ -1988,7 +1988,7 @@ class MusicBot(discord.Client):
     async def cmd_uptime(self, channel):
         """
         Usage:
-
+            {command_prefix}uptime
         Showing uptime of the musicbot
         """
         nowtime = time.time()
@@ -2001,7 +2001,7 @@ class MusicBot(discord.Client):
     async def cmd_play_initiald(self, message, player, channel, author, permissions):
         """
         Usage:
-            !play_initald
+            {command_prefix}play_initald
 
         Adds the Initial D playlist into the playlist.  
         """
@@ -2011,7 +2011,7 @@ class MusicBot(discord.Client):
     async def cmd_aesthetic(self, message, player, channel, author, permissions):
         """
         Usage:
-            !aesthetic
+            {command_prefix}aesthetic
 
         Adds a vaporwave playlist into the playlist.  
         """
@@ -2022,7 +2022,7 @@ class MusicBot(discord.Client):
     async def cmd_wubwub(self, message, player, channel, author, permissions):
         """
         Usage:
-            !wubwub
+            {command_prefix}wubwub
 
         Adds a dubstep-ish playlist into queue.
         """
@@ -2032,7 +2032,7 @@ class MusicBot(discord.Client):
     async def cmd_weeb(self, message, player, channel, author, permissions):
         """
         Usage:
-            !weeb
+            {command_prefix}weeb
 
         Adds a weeb playlist into queue.
         """
@@ -2042,15 +2042,15 @@ class MusicBot(discord.Client):
     async def cmd_pladd(self, player, song_url=None):
         """
         Usage:
-            !pladd - adding current song
-            !pladd song_url - adding url into playlist
+            {command_prefix}pladd - adding current song
+            {command_prefix}pladd song_url - adding url into playlist
 
         Adds a song to the autoplaylist.
         """
 
-        #No url provided
+        # No url provided
         if not song_url:
-            #Check if there is something playing and get the information
+            # Check if there is something playing and get the information
             if player._current_entry:
                 song_url = player._current_entry.url
                 title = player._current_entry.title
@@ -2059,46 +2059,46 @@ class MusicBot(discord.Client):
                 raise exceptions.CommandError('There is nothing playing.', expire_in=20)
 
         else:
-            #Get song info from url
+            # Get song info from url
             info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
             title = info.get('title', '')
 
-            #Verify proper url
+            # Verify proper url
             if not title:
                 raise exceptions.CommandError('Invalid url. Please insure link is a valid YouTube, SoundCloud or BandCamp url.', expire_in=20)
                 
-        #Verify song isn't already in our playlist
-        for url in self.autoplaylist:
-            if song_url == url:
-                return Response("Song already present in autoplaylist.", delete_after=30)
+        # Verify song isn't already in our playlist
+        if song_url in self.autoplaylist:
+            return Response("Song already present in autoplaylist.", delete_after=30)
 
         self.autoplaylist.append(song_url)
         write_file(self.config.auto_playlist_file, self.autoplaylist)
         self.autoplaylist = load_file(self.config.auto_playlist_file)
         return Response("Added %s to autoplaylist." % title, delete_after=30)
 
+
     async def cmd_plremove(self, player, song_url=None):
         """
         Usage:
-            !plremove current song
-            !plremove song_url
+            {command_prefix}plremove current song
+            {command_prefix}plremove song_url
 
         Remove a song from the autoplaylist.
         """
 
-        #No url provided
+        # No url provided
         if not song_url:
-            #Check if there is something playing
+            # Check if there is something playing
             if not player._current_entry:
                 raise exceptions.CommandError('There is nothing playing.', expire_in=20)
 
-            #Get the url of the current entry
+            # Get the url of the current entry
             else:
                 song_url = player._current_entry.url
                 title = player._current_entry.title
 
         else:
-            #Get song info from url
+            # Get song info from url
             info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
 
             #Verify proper url
@@ -2108,20 +2108,37 @@ class MusicBot(discord.Client):
             else:
                 title = info.get('title', '')
 
-#Verify that the song is in our playlist
-        for url in self.autoplaylist:
-            if song_url == url:
-                self.autoplaylist.remove(song_url)
-                write_file(self.config.auto_playlist_file, self.autoplaylist)
-                self.autoplaylist = load_file(self.config.auto_playlist_file)
-                return Response("Removed %s from the autoplaylist." % title, delete_after=30)
+        # Verify that the song is in our playlist
+        if song_url in self.autoplaylist:
+            self.autoplaylist.remove(song_url)
+            write_file(self.config.auto_playlist_file, self.autoplaylist)
+            self.autoplaylist = load_file(self.config.auto_playlist_file)
+            return Response("Removed %s from the autoplaylist." % title, delete_after=30)
 
         return Response("Song not present in autoplaylist.", delete_after=30) 
+
+    async def cmd_play_localist(self, player, channel, author):
+        """
+        Usage:
+            {command_prefix}play_localist
+        """
+        # TODO: test this
+        plist = load_file('config/localist.txt')
+        for item in plist:
+            try:
+                await player.playlist.add_entry(item, channel=channel, author=author)
+            except exceptions.ExtractionError as e:
+                log.error(f'Error adding song from autoplaylist: {e}')
+                log.debug('', exc_info=True)
+                continue
+
+        return Response(f'Added {len(plist)} songs into playlist', delete_after=30)
+
 
     async def cmd_summon(self, channel, guild, author, voice_channel):
         """
         Usage:
-            !summon
+            {command_prefix}summon
 
         Call the bot to the summoner's voice channel.
         """
@@ -2165,7 +2182,7 @@ class MusicBot(discord.Client):
     async def cmd_pause(self, player):
         """
         Usage:
-            !pause
+            {command_prefix}pause
 
         Pauses playback of the current song.
         """
@@ -2180,7 +2197,7 @@ class MusicBot(discord.Client):
     async def cmd_resume(self, player):
         """
         Usage:
-            !resume
+            {command_prefix}resume
 
         Resumes playback of a paused song.
         """
@@ -2195,7 +2212,7 @@ class MusicBot(discord.Client):
     async def cmd_shuffle(self, channel, player):
         """
         Usage:
-            !shuffle
+            {command_prefix}shuffle
 
         Shuffles the server's queue.
         """
@@ -2219,7 +2236,7 @@ class MusicBot(discord.Client):
     async def cmd_clear(self, player, author):
         """
         Usage:
-            !clear
+            {command_prefix}clear
 
         Clears the playlist.
         """
@@ -2358,7 +2375,7 @@ class MusicBot(discord.Client):
     async def cmd_volume(self, message, player, new_volume=None):
         """
         Usage:
-            !volume (+/-)[volume]
+            {command_prefix}volume (+/-)[volume]
 
         Sets the playback volume. Accepted values are from 1 to 100.
         Putting + or - before the volume will make the volume change relative to the current volume.
