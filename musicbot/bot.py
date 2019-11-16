@@ -2115,24 +2115,39 @@ class MusicBot(discord.Client):
             self.autoplaylist = load_file(self.config.auto_playlist_file)
             return Response("Removed %s from the autoplaylist." % title, delete_after=30)
 
-        return Response("Song not present in autoplaylist.", delete_after=30) 
+        return Response("Song not present in autoplaylist.", delete_after=30)
 
-    async def cmd_play_localist(self, player, channel, author):
+    async def cmd_localist(self, player, channel, author, leftover_args):
         """
         Usage:
-            {command_prefix}play_localist
+            {command_prefix}localist playlist1 playlist2 ...
+        
+        Adds local playlist in playlist folder into queue.
         """
         await self.send_typing(channel)
-        plist = load_file('config/localist.txt')
-        for item in plist:
-            try:
-                await player.playlist.add_entry(item, channel=channel, author=author)
-            except exceptions.ExtractionError as e:
-                log.error(f'Error adding song from autoplaylist: {e}')
-                log.debug('', exc_info=True)
-                continue
+        t0 = time.time()
+        if len(leftover_args) == 0:
+            return Response(f'Usage: {command_prefix}localist <playlist name>', delete_after=30)
 
-        return Response(f'Added {len(plist)} songs into playlist', delete_after=30)
+        multi_list = [load_file(f'playlist/{x}.txt') for x in leftover_args]
+        plist = [a for b in multi_list for a in b]  # flatten list
+
+        if len(plist) > 0:
+            for item in plist:
+                try:
+                    await player.playlist.add_entry(item, channel=channel, author=author)
+                except exceptions.ExtractionError as e:
+                    log.error(f'Error adding song from autoplaylist: {e}')
+                    log.debug('', exc_info=True)
+                    continue
+            
+            t1 = time.time()
+
+            return Response(f'Added {len(plist)} songs into playlist in {t1 - t0:.2f}s.', delete_after=30)
+
+        else:
+            raise exceptions.CommandError(self.str.get('cmd-localist-playlist', 'Cannot read local playlist'), expire_in=2)
+
 
 
     async def cmd_summon(self, channel, guild, author, voice_channel):
