@@ -279,7 +279,7 @@ class MusicPlayer(EventEmitter, Serializable):
         if data:
             if self.repeatState == MusicPlayerRepeatState.YES:
                 self.repeatState = self.MusicPlayerRepeatState.NONE
-                log.info("An error occured, no longer repeating!")
+                log.error("An error occured, no longer repeating!")
 
     def _kill_current_player(self):
         if self._current_player:

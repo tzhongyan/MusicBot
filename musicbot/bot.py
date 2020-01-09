@@ -2127,7 +2127,7 @@ class MusicBot(discord.Client):
         await self.send_typing(channel)
         t0 = time.time()
         if len(leftover_args) == 0:
-            return Response(f'Usage: {command_prefix}localist <playlist name>', delete_after=30)
+            return Response(f'Usage error. Use help to get more info.', delete_after=30)
 
         multi_list = [load_file(f'playlist/{x}.txt') for x in leftover_args]
         plist = [a for b in multi_list for a in b]  # flatten list
