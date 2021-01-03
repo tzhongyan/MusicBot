@@ -39,6 +39,8 @@ class Config:
 
         self.spotify_clientid = config.get('Credentials', 'Spotify_ClientID', fallback=ConfigDefaults.spotify_clientid)
         self.spotify_clientsecret = config.get('Credentials', 'Spotify_ClientSecret', fallback=ConfigDefaults.spotify_clientsecret)
+        self.smmry_api_key = config.get('Credentials', 'SMMRY_API_KEY', fallback=ConfigDefaults.smmry_api_key)
+        self.smmry_length = config.get('Credentials', 'SMMRY_LENGTH', fallback=ConfigDefaults.smmry_length)
 
         self.owner_id = config.get('Permissions', 'OwnerID', fallback=ConfigDefaults.owner_id)
         self.dev_ids = config.get('Permissions', 'DevIDs', fallback=ConfigDefaults.dev_ids)
@@ -202,6 +204,10 @@ class Config:
         if self.spotify_clientid and self.spotify_clientsecret:
             self._spotify = True
 
+        self._smmry = False
+        if self.smmry_api_key:
+            self._smmry = True
+
         self.delete_invoking = self.delete_invoking and self.delete_messages
 
         ap_path, ap_name = os.path.split(self.auto_playlist_file)
@@ -326,6 +332,8 @@ class ConfigDefaults:
 
     spotify_clientid = None
     spotify_clientsecret = None
+    smmry_api_key = None
+    smmry_length = 7
 
     command_prefix = '!'
     bound_channels = set()

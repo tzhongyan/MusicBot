@@ -44,6 +44,10 @@ class FFmpegWarning(MusicbotException):
 class SpotifyError(MusicbotException):
     pass
 
+# Issues retrieving SMMRY
+class SMMRYError(MusicbotException):
+    pass
+
 # The user doesn't have permission to use a command
 class PermissionsError(CommandError):
     @property
